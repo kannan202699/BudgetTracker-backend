@@ -1,5 +1,6 @@
 HELP.md
 target/
+out/
 
 # Local secrets — never commit
 application-local.properties
@@ -19,7 +20,7 @@ application-local.properties
 .sts4-cache
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr
@@ -36,3 +37,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
