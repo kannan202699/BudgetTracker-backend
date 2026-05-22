@@ -2,6 +2,12 @@ package com.budgettracker.budget_app.service;
 
 import com.budgettracker.budget_app.exception.ForbiddenException;
 import com.budgettracker.budget_app.exception.ResourceNotFoundException;
+import com.budgettracker.budget_app.repository.BudgetGoalRepository;
+import com.budgettracker.budget_app.repository.EmiLoanRepository;
+import com.budgettracker.budget_app.repository.PasswordResetTokenRepository;
+import com.budgettracker.budget_app.repository.RecurringTransactionRepository;
+import com.budgettracker.budget_app.repository.RefreshTokenRepository;
+import com.budgettracker.budget_app.repository.SavingsGoalRepository;
 import com.budgettracker.budget_app.repository.TransactionRepository;
 import com.budgettracker.budget_app.repository.UserRepository;
 import com.budgettracker.budget_app.requestdto.TransactionRequest;
@@ -29,6 +35,12 @@ class AdminServiceTest {
 
     @Mock private UserRepository userRepository;
     @Mock private TransactionRepository transactionRepository;
+    @Mock private BudgetGoalRepository budgetGoalRepository;
+    @Mock private EmiLoanRepository emiLoanRepository;
+    @Mock private RecurringTransactionRepository recurringTransactionRepository;
+    @Mock private SavingsGoalRepository savingsGoalRepository;
+    @Mock private RefreshTokenRepository refreshTokenRepository;
+    @Mock private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @InjectMocks
     private AdminService adminService;
@@ -74,12 +86,17 @@ class AdminServiceTest {
     // --- deleteUser ---
 
     @Test
-    void deleteUser_regularUser_deletesUserAndTransactions() {
+    void deleteUser_regularUser_deletesAllAssociatedData() {
         when(userRepository.findById(1L)).thenReturn(Optional.of(regularUser));
 
         adminService.deleteUser(1L);
 
         verify(transactionRepository).deleteByUser(regularUser);
+        verify(budgetGoalRepository).deleteByUser(regularUser);
+        verify(emiLoanRepository).deleteByUser(regularUser);
+        verify(recurringTransactionRepository).deleteByUser(regularUser);
+        verify(savingsGoalRepository).deleteByUser(regularUser);
+        verify(refreshTokenRepository).deleteByUser(regularUser);
         verify(userRepository).delete(regularUser);
     }
 

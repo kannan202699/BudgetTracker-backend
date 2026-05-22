@@ -55,6 +55,7 @@ class DataInitializerTest {
         UserRequest existing = new UserRequest();
         existing.setUsername("admin");
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(existing));
+        when(passwordEncoder.matches(anyString(), any())).thenReturn(true);
 
         dataInitializer.run();
 

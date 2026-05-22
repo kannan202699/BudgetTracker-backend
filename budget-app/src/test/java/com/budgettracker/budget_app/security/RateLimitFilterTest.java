@@ -45,12 +45,12 @@ class RateLimitFilterTest {
     void loginRequests_exceedLimit_returns429() throws Exception {
         // Use unique IP to avoid interference with other tests
         String ip = "10.0.1.1";
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 20; i++) {
             MockHttpServletRequest req = new MockHttpServletRequest("POST", "/auth/token");
             req.setRemoteAddr(ip);
             filter.doFilterInternal(req, new MockHttpServletResponse(), new MockFilterChain());
         }
-        // 11th request should be rate-limited
+        // 21st request should be rate-limited
         MockHttpServletRequest req = new MockHttpServletRequest("POST", "/auth/token");
         req.setRemoteAddr(ip);
         MockHttpServletResponse res = new MockHttpServletResponse();
@@ -63,7 +63,7 @@ class RateLimitFilterTest {
     @Test
     void registerRequests_exceedLimit_returns429() throws Exception {
         String ip = "10.0.2.1";
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 10; i++) {
             MockHttpServletRequest req = new MockHttpServletRequest("POST", "/auth/register/user");
             req.setRemoteAddr(ip);
             filter.doFilterInternal(req, new MockHttpServletResponse(), new MockFilterChain());
@@ -79,7 +79,7 @@ class RateLimitFilterTest {
     @Test
     void xForwardedForHeader_usedAsIp() throws Exception {
         String ip = "10.0.3.1";
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 20; i++) {
             MockHttpServletRequest req = new MockHttpServletRequest("POST", "/auth/token");
             req.addHeader("X-Forwarded-For", ip + ", 192.168.1.1");
             filter.doFilterInternal(req, new MockHttpServletResponse(), new MockFilterChain());
@@ -95,7 +95,7 @@ class RateLimitFilterTest {
     @Test
     void xRealIpHeader_usedAsIp() throws Exception {
         String ip = "10.0.4.1";
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 20; i++) {
             MockHttpServletRequest req = new MockHttpServletRequest("POST", "/auth/token");
             req.addHeader("X-Real-IP", ip);
             filter.doFilterInternal(req, new MockHttpServletResponse(), new MockFilterChain());

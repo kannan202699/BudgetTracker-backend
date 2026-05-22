@@ -8,6 +8,9 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+/**
+ * Seeds the database with the admin account on application startup, creating or updating as needed.
+ */
 @Component
 public class DataInitializer implements CommandLineRunner {
 
@@ -26,22 +29,31 @@ public class DataInitializer implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Creates the admin account if absent, or updates the password when it has changed.
+     */
     @Override
     public void run(String... args) {
 
-        if (userRepository.findByUsername(adminUsername).isEmpty()) {
-
-            UserRequest admin = new UserRequest();
-            admin.setUsername(adminUsername);
-            admin.setPassword(passwordEncoder.encode(adminPassword));
-            admin.setRole(Role.ADMIN);
-
-            userRepository.save(admin);
-
-            System.out.println("✅ Admin user created");
-        } else {
-            System.out.println("ℹ️ Admin already exists");
-        }
+        userRepository.findByUsername(adminUsername).ifPresentOrElse(
+                existing -> {
+                    if (!passwordEncoder.matches(adminPassword, existing.getPassword())) {
+                        existing.setPassword(passwordEncoder.encode(adminPassword));
+                        userRepository.save(existing);
+                        System.out.println("✅ Admin password updated");
+                    } else {
+                        System.out.println("ℹ️ Admin already exists");
+                    }
+                },
+                () -> {
+                    UserRequest admin = new UserRequest();
+                    admin.setUsername(adminUsername);
+                    admin.setPassword(passwordEncoder.encode(adminPassword));
+                    admin.setRole(Role.ADMIN);
+                    userRepository.save(admin);
+                    System.out.println("✅ Admin user created");
+                }
+        );
     }
 
 }

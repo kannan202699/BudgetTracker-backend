@@ -1,10 +1,7 @@
 package com.budgettracker.budget_app.controller;
 
 import com.budgettracker.budget_app.exception.UnAuthorizedException;
-import com.budgettracker.budget_app.requestdto.AuthRequest;
-import com.budgettracker.budget_app.requestdto.RefreshToken;
-import com.budgettracker.budget_app.requestdto.RefreshTokenRequest;
-import com.budgettracker.budget_app.requestdto.RegisterRequest;
+import com.budgettracker.budget_app.requestdto.*;
 import com.budgettracker.budget_app.responsedto.AuthResponse;
 import com.budgettracker.budget_app.security.JwtUtil;
 import com.budgettracker.budget_app.service.AuthService;
@@ -15,7 +12,12 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
@@ -35,20 +37,43 @@ public class AuthController {
         this.jwtUtil = jwtUtil;
     }
 
-    @Operation(summary = "Register a new user")
+    // ── Email Verification ──────────────────────────────────────────────────
+
+    @Operation(summary = "Send 6-digit OTP to the given email for registration verification")
+    @PostMapping("/verify-email/send")
+    public ResponseEntity<Map<String, String>> sendVerification(
+            @Valid @RequestBody SendVerificationRequest request) {
+        log.info("POST /auth/verify-email/send - {}", request.getEmail());
+        authService.sendEmailVerification(request.getEmail());
+        return ResponseEntity.ok(Map.of("message", "Verification code sent to " + request.getEmail()));
+    }
+
+    @Operation(summary = "Confirm OTP — returns a verifiedToken required for registration")
+    @PostMapping("/verify-email/confirm")
+    public ResponseEntity<Map<String, String>> confirmVerification(
+            @Valid @RequestBody VerifyEmailRequest request) {
+        log.info("POST /auth/verify-email/confirm - {}", request.getEmail());
+        String verifiedToken = authService.verifyEmailOtp(request.getEmail(), request.getOtp());
+        return ResponseEntity.ok(Map.of("verifiedToken", verifiedToken));
+    }
+
+    // ── Registration ────────────────────────────────────────────────────────
+
+    @Operation(summary = "Register a new user (requires verifiedToken from email verification)")
     @PostMapping("/register/user")
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request) {
-        log.info("Registration request for user: {}", request.getUsername());
+        log.info("POST /auth/register/user - username: {}", request.getUsername());
         authService.saveUser(request);
         return ResponseEntity.ok("User registered successfully");
     }
 
-    @Operation(summary = "Login and get JWT + refresh token")
+    // ── Login ────────────────────────────────────────────────────────────────
+
+    @Operation(summary = "Login with username or email — returns JWT + refresh token")
     @PostMapping("/token")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
-        log.info("Login attempt for user: {}", request.getUsername());
-        AuthResponse response = authService.generateAuthToken(request);
-        return ResponseEntity.ok(response);
+        log.info("POST /auth/token - {}", request.getUsername());
+        return ResponseEntity.ok(authService.generateAuthToken(request));
     }
 
     @Operation(summary = "Exchange a valid refresh token for a new access token")
@@ -57,21 +82,17 @@ public class AuthController {
         if (request.getRefreshToken() == null || request.getRefreshToken().isBlank()) {
             throw new UnAuthorizedException("Refresh token is required");
         }
-
         RefreshToken stored = refreshTokenService.findByToken(request.getRefreshToken())
                 .orElseThrow(() -> new UnAuthorizedException("Invalid refresh token"));
 
         refreshTokenService.verifyExpiration(stored);
-
-        // Rotate: delete old refresh token, issue a new one
         refreshTokenService.deleteByToken(stored.getToken());
-        RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(stored.getUser());
-        String newAccessToken = jwtUtil.generateToken(stored.getUser().getUsername(), stored.getUser().getRole());
+        RefreshToken newRT = refreshTokenService.createRefreshToken(stored.getUser());
+        String newAt = jwtUtil.generateToken(stored.getUser().getUsername(), stored.getUser().getRole());
 
-        log.info("Token refreshed for user: {}", stored.getUser().getUsername());
         return ResponseEntity.ok(AuthResponse.builder()
-                .token(newAccessToken)
-                .refreshToken(newRefreshToken.getToken())
+                .token(newAt)
+                .refreshToken(newRT.getToken())
                 .role(stored.getUser().getRole().name())
                 .username(stored.getUser().getUsername())
                 .userId(stored.getUser().getId())
@@ -86,4 +107,24 @@ public class AuthController {
         }
         return ResponseEntity.ok("Logged out successfully");
     }
+
+    // ── Forgot / Reset Password ──────────────────────────────────────────────
+
+    @Operation(summary = "Request a password reset link via email")
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok(Map.of(
+                "message", "If that email is registered, you will receive a reset link shortly."));
+    }
+
+    @Operation(summary = "Reset password using a valid reset token")
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok(Map.of("message", "Password reset successfully. Please sign in."));
+    }
+
 }

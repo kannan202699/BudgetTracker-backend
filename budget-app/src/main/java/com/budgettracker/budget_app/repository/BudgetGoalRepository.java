@@ -18,4 +18,8 @@ public interface BudgetGoalRepository extends JpaRepository<BudgetGoal, Long> {
 
     @Modifying
     void deleteByUserAndCategory(UserRequest user, String category);
+
+    @Modifying
+    void deleteByUser(UserRequest user);
+
 }

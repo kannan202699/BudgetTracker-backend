@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
@@ -34,6 +35,7 @@ class BudgetGoalControllerTest {
     @MockBean JwtUtil jwtUtil;
 
     @Test
+    @WithMockUser(username = "alice")
     void getGoals_returnsMapFromService() throws Exception {
         when(budgetGoalService.getGoals()).thenReturn(Map.of("Food", 3000.0, "Transport", 1500.0));
 
@@ -44,6 +46,7 @@ class BudgetGoalControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "alice")
     void getGoals_whenEmpty_returnsEmptyMap() throws Exception {
         when(budgetGoalService.getGoals()).thenReturn(Map.of());
 
@@ -53,6 +56,7 @@ class BudgetGoalControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "alice")
     void setGoal_validRequest_returns200() throws Exception {
         SetGoalRequest request = new SetGoalRequest();
         request.setAmount(2500.0);
@@ -102,6 +106,7 @@ class BudgetGoalControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "alice")
     void deleteGoal_returns204() throws Exception {
         mockMvc.perform(delete("/budget/goals/Food"))
                 .andExpect(status().isNoContent());
@@ -110,6 +115,7 @@ class BudgetGoalControllerTest {
     }
 
     @Test
+    @WithMockUser(username = "alice")
     void deleteGoal_urlEncodedCategory_passesDecodedToService() throws Exception {
         mockMvc.perform(delete("/budget/goals/Entertainment"))
                 .andExpect(status().isNoContent());

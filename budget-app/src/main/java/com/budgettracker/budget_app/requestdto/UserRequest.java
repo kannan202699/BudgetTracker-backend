@@ -30,10 +30,14 @@ public class UserRequest {
     @Column(nullable = false)
     private Role role;
 
+    @Column(unique = true)
     private String email;
 
     private String fullName;
 
     private String phone;
+
+    @Column(name = "profile_picture", columnDefinition = "TEXT")
+    private String profilePicture;
 
 }

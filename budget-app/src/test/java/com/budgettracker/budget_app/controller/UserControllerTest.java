@@ -42,6 +42,7 @@ class UserControllerTest {
     @Autowired ObjectMapper objectMapper;
     @MockBean UserRepository userRepository;
     @MockBean JwtUtil jwtUtil;
+    @MockBean com.budgettracker.budget_app.service.AuthService authService;
 
     private UserRequest alice;
 

@@ -14,18 +14,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * In-memory rate limiter guarding the login and registration endpoints against brute-force attempts.
+ */
 @Component
 @Order(1)
 @Slf4j
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final int MAX_LOGIN_REQUESTS    = 10;
-    private static final int MAX_REGISTER_REQUESTS = 5;
+    private static final int MAX_LOGIN_REQUESTS    = 20;
+    private static final int MAX_REGISTER_REQUESTS = 10;
     private static final long WINDOW_MS            = 300_000L; // 5 minutes
 
     private final ConcurrentHashMap<String, List<Long>> loginMap    = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, List<Long>> registerMap = new ConcurrentHashMap<>();
 
+    /**
+     * Applies per-IP rate limiting to login (20 req/5min) and registration (10 req/5min) endpoints.
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
             throws ServletException, IOException {
@@ -80,8 +86,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         res.setStatus(429);
         res.setContentType("application/json");
         res.getWriter().write(
-            "{\"status\":429,\"error\":\"Too Many Requests\"," +
-            "\"message\":\"Too many attempts. Please wait a few minutes and try again.\"}"
+                "{\"status\":429,\"error\":\"Too Many Requests\"," +
+                        "\"message\":\"Too many attempts. Please wait a few minutes and try again.\"}"
         );
     }
 }

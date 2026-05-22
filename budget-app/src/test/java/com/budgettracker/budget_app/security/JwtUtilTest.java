@@ -20,6 +20,7 @@ class JwtUtilTest {
     void setUp() {
         jwtUtil = new JwtUtil();
         ReflectionTestUtils.setField(jwtUtil, "secret", TEST_SECRET);
+        ReflectionTestUtils.setField(jwtUtil, "tokenValidityMs", 3_600_000L);
     }
 
     @Test

@@ -50,6 +50,8 @@ class AuthControllerTest {
         RegisterRequest req = new RegisterRequest();
         req.setUsername("newuser");
         req.setPassword("Valid@Pass1");
+        req.setEmail("newuser@example.com");
+        req.setVerifiedToken("some-verified-token");
         doNothing().when(authService).saveUser(any());
 
         mockMvc.perform(post("/auth/register/user")
@@ -88,6 +90,8 @@ class AuthControllerTest {
         RegisterRequest req = new RegisterRequest();
         req.setUsername("taken");
         req.setPassword("Valid@Pass1");
+        req.setEmail("taken@example.com");
+        req.setVerifiedToken("some-verified-token");
         doThrow(new RuntimeException("Username is already taken")).when(authService).saveUser(any());
 
         mockMvc.perform(post("/auth/register/user")

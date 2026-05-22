@@ -116,7 +116,7 @@ class TransactionServiceTest {
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
         TransactionRequest t1 = buildTxn(1L, userAlice);
         TransactionRequest t2 = buildTxn(2L, userBob);
-        when(transactionRepository.findAllByOrderByDateDesc()).thenReturn(List.of(t1, t2));
+        when(transactionRepository.findByUser(eq(admin), any(Sort.class))).thenReturn(List.of(t1, t2));
 
         List<TransactionResponse> results = transactionService.getAllTransactions();
 
@@ -146,7 +146,7 @@ class TransactionServiceTest {
         setAuth("admin");
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(admin));
         Page<TransactionRequest> page = new PageImpl<>(List.of(buildTxn(1L, userAlice), buildTxn(2L, userBob)));
-        when(transactionRepository.findAll(any(Pageable.class))).thenReturn(page);
+        when(transactionRepository.findByUser(eq(admin), any(Pageable.class))).thenReturn(page);
 
         Page<TransactionResponse> result = transactionService.getTransactions(0, 10);
 

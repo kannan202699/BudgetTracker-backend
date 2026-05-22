@@ -1,8 +1,11 @@
 package com.budgettracker.budget_app.service;
 
 import com.budgettracker.budget_app.exception.UnAuthorizedException;
+import com.budgettracker.budget_app.repository.EmailVerificationTokenRepository;
+import com.budgettracker.budget_app.repository.PasswordResetTokenRepository;
 import com.budgettracker.budget_app.repository.UserRepository;
 import com.budgettracker.budget_app.requestdto.AuthRequest;
+import com.budgettracker.budget_app.requestdto.EmailVerificationToken;
 import com.budgettracker.budget_app.requestdto.RefreshToken;
 import com.budgettracker.budget_app.requestdto.RegisterRequest;
 import com.budgettracker.budget_app.requestdto.UserRequest;
@@ -33,6 +36,9 @@ class AuthServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private RefreshTokenService refreshTokenService;
+    @Mock private PasswordResetTokenRepository passwordResetTokenRepository;
+    @Mock private EmailVerificationTokenRepository emailVerificationTokenRepository;
+    @Mock private EmailService emailService;
 
     @InjectMocks
     private AuthService authService;
@@ -46,6 +52,17 @@ class AuthServiceTest {
                 .build();
     }
 
+    private EmailVerificationToken verifiedEvToken(String email, String token) {
+        return EmailVerificationToken.builder()
+                .email(email)
+                .otp("123456")
+                .verified(true)
+                .verifiedToken(token)
+                .createdAt(Instant.now())
+                .expiryDate(Instant.now().plusSeconds(1800))
+                .build();
+    }
+
     // --- saveUser ---
 
     @Test
@@ -53,7 +70,13 @@ class AuthServiceTest {
         RegisterRequest req = new RegisterRequest();
         req.setUsername("alice");
         req.setPassword("Valid@Pass1");
+        req.setEmail("alice@example.com");
+        req.setVerifiedToken("verified-token");
+
+        when(emailVerificationTokenRepository.findByVerifiedToken("verified-token"))
+                .thenReturn(Optional.of(verifiedEvToken("alice@example.com", "verified-token")));
         when(userRepository.findByUsername("alice")).thenReturn(Optional.empty());
+        when(userRepository.existsByEmail("alice@example.com")).thenReturn(false);
         when(passwordEncoder.encode("Valid@Pass1")).thenReturn("hashed");
 
         authService.saveUser(req);
@@ -71,8 +94,13 @@ class AuthServiceTest {
         RegisterRequest req = new RegisterRequest();
         req.setUsername("alice");
         req.setPassword("Valid@Pass1");
+        req.setEmail("alice@example.com");
+        req.setVerifiedToken("verified-token");
+
         UserRequest existing = new UserRequest();
         existing.setUsername("alice");
+        when(emailVerificationTokenRepository.findByVerifiedToken("verified-token"))
+                .thenReturn(Optional.of(verifiedEvToken("alice@example.com", "verified-token")));
         when(userRepository.findByUsername("alice")).thenReturn(Optional.of(existing));
 
         assertThatThrownBy(() -> authService.saveUser(req))
@@ -86,7 +114,13 @@ class AuthServiceTest {
         RegisterRequest req = new RegisterRequest();
         req.setUsername("  bob  ");
         req.setPassword("Valid@Pass1");
+        req.setEmail("bob@example.com");
+        req.setVerifiedToken("verified-token");
+
+        when(emailVerificationTokenRepository.findByVerifiedToken("verified-token"))
+                .thenReturn(Optional.of(verifiedEvToken("bob@example.com", "verified-token")));
         when(userRepository.findByUsername("bob")).thenReturn(Optional.empty());
+        when(userRepository.existsByEmail("bob@example.com")).thenReturn(false);
         when(passwordEncoder.encode(anyString())).thenReturn("hashed");
 
         authService.saveUser(req);
@@ -107,7 +141,7 @@ class AuthServiceTest {
         user.setPassword("hashed");
         user.setRole(Role.USER);
 
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(userRepository.findByUsernameIgnoreCase("alice")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Valid@Pass1", "hashed")).thenReturn(true);
         when(jwtUtil.generateToken("alice", Role.USER)).thenReturn("jwt-token");
         when(refreshTokenService.createRefreshToken(user)).thenReturn(fakeRefreshToken(user));
@@ -124,7 +158,7 @@ class AuthServiceTest {
     @Test
     void generateAuthToken_userNotFound_throwsUnauthorized() {
         AuthRequest req = AuthRequest.builder().username("unknown").password("pass").build();
-        when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
+        when(userRepository.findByUsernameIgnoreCase("unknown")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.generateAuthToken(req))
                 .isInstanceOf(UnAuthorizedException.class)
@@ -139,7 +173,7 @@ class AuthServiceTest {
         user.setPassword("hashed");
         user.setRole(Role.USER);
 
-        when(userRepository.findByUsername("alice")).thenReturn(Optional.of(user));
+        when(userRepository.findByUsernameIgnoreCase("alice")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong", "hashed")).thenReturn(false);
 
         assertThatThrownBy(() -> authService.generateAuthToken(req))
@@ -156,7 +190,7 @@ class AuthServiceTest {
         user.setPassword("hashed-admin");
         user.setRole(Role.ADMIN);
 
-        when(userRepository.findByUsername("admin")).thenReturn(Optional.of(user));
+        when(userRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Admin@1!", "hashed-admin")).thenReturn(true);
         when(jwtUtil.generateToken("admin", Role.ADMIN)).thenReturn("admin-jwt");
         when(refreshTokenService.createRefreshToken(user)).thenReturn(fakeRefreshToken(user));
